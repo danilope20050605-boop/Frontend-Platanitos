@@ -10,7 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Introduce un correo válido." }),
@@ -20,6 +20,8 @@ const formSchema = z.object({
 });
 
 export function Login() {
+  const navigate = useNavigate(); 
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -28,9 +30,38 @@ export function Login() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log("Enviando al backend:", values);
-    //API
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        localStorage.setItem("usuario", JSON.stringify(data));
+        
+        alert(`¡Bienvenido de nuevo, ${data.nombres}!`);
+        
+        navigate("/");
+        
+        window.location.reload();
+        
+      } else {
+        const errorText = await response.text();
+        alert("Error de autenticación: " + errorText);
+      }
+    } catch (error) {
+      console.error("Error de conexión:", error);
+      alert("No se pudo establecer comunicación con el servidor backend.");
+    }
   }
 
   return (
@@ -41,7 +72,7 @@ export function Login() {
         </h1>
 
         <div className="flex bg-gray-50 rounded-xl p-1 mb-8">
-          <button className="flex-1 py-3 text-sm font-medium text-green-800 border-b-2 border-green-800">
+          <button type="button" className="flex-1 py-3 text-sm font-medium text-green-800 border-b-2 border-green-800">
             Correo electrónico
           </button>
         </div>
@@ -102,6 +133,7 @@ export function Login() {
           </p>
           <Link to="/registro" className="w-full">
             <Button
+              type="button"
               variant="outline"
               className="w-full h-14 rounded-xl border-green-800 text-green-800 font-bold hover:bg-green-50 uppercase tracking-widest"
             >
